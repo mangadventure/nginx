@@ -1,0 +1,24 @@
+server {
+    listen       80 default_server;
+    listen  [::]:80 default_server;
+
+    server_name _;
+
+    return 444;
+}
+
+server {
+    listen       443 ssl default_server;
+    listen  [::]:443 ssl default_server;
+
+    ssl_reject_handshake on;
+}
+
+server {
+    listen       80;
+    listen  [::]:80;
+
+    return 301  https://$host$request_uri;
+}
+
+# vim:ft=nginx:
