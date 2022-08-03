@@ -1,10 +1,6 @@
 FROM alpine:edge
 
-ARG NGINX_VERSION=1.23.1
-
-LABEL org.opencontainers.image.title="MangAdventure nginx" \
-      org.opencontainers.image.version="${NGINX_VERSION}" \
-      org.opencontainers.image.source="https://github.com/mangadventure/nginx"
+ARG NGINX_VERSION=3550b00d9dc8
 
 COPY patches /tmp/patches
 
@@ -22,6 +18,7 @@ RUN addgroup -S nginx \
         cmake \
         curl \
         git \
+        perl \
         pcre2-dev \
         liburing-dev \
         linux-headers \
@@ -33,8 +30,8 @@ RUN addgroup -S nginx \
         zstd-dev \
         -X https://dl-cdn.alpinelinux.org/alpine/edge/testing/ \
     && mkdir -p /usr/src/nginx /etc/ssl /etc/letsencrypt /etc/nginx/sites-enabled \
-    && git clone --depth=1 --shallow-submodules --recursive \
-        https://github.com/cloudflare/quiche /usr/src/quiche \
+    && git clone --depth=1 --branch=OpenSSL_1_1_1q+quic \
+        https://github.com/quictls/openssl /usr/src/openssl \
     && git clone --depth=1 --shallow-submodules --recursive \
         https://github.com/google/ngx_brotli /usr/src/ngx_brotli \
     && git clone --depth=1 https://github.com/tokers/zstd-nginx-module /usr/src/ngx_zstd \
@@ -42,12 +39,14 @@ RUN addgroup -S nginx \
     && git clone --depth=1 https://github.com/vozlt/nginx-module-vts /usr/src/ngx_vts \
     && git clone --depth=1 https://github.com/openresty/memc-nginx-module /usr/src/ngx_memc \
     && git clone --depth=1 https://github.com/openresty/redis2-nginx-module /usr/src/ngx_redis2 \
-    && curl -Ssf https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
+    && curl -Ssf https://hg.nginx.org/nginx-quic/archive/${NGINX_VERSION}.tar.gz \
         | tar xzf - -C /usr/src/nginx --strip-components=1 \
     && curl -Ssfo /etc/ssl/dhparam.pem https://2ton.com.au/dhparam/4096 \
+    && cd /usr/src/openssl \
+    && patch -Np1 < /tmp/patches/openssl.patch \
     && cd /usr/src/nginx \
-    && cat /tmp/patches/*.patch | patch -Np1 \
-    && ./configure \
+    && cat /tmp/patches/0*.patch | patch -Np1 \
+    && ./auto/configure \
         --prefix=/etc/nginx \
         --sbin-path=/usr/sbin/nginx \
         --modules-path=/var/lib/nginx/modules \
@@ -87,8 +86,7 @@ RUN addgroup -S nginx \
         --without-http_scgi_module \
         --without-http_split_clients_module \
         --without-http_userid_module \
-        --with-quiche=/usr/src/quiche \
-        --with-openssl=/usr/src/quiche/quiche/deps/boringssl \
+        --with-openssl=/usr/src/openssl \
         --with-cc-opt='-O2 -pipe' \
         --with-ld-opt='-lmimalloc' \
         --add-dynamic-module=/usr/src/ngx_brotli \
@@ -102,6 +100,8 @@ RUN addgroup -S nginx \
     && strip /usr/sbin/nginx objs/ngx_*_module.so \
     && cp -v objs/ngx_*_module.so /var/lib/nginx/modules \
     && ln -s /var/lib/nginx/modules /etc/nginx/modules \
+    && printf >> /etc/nginx/uwsgi_params \
+        '\n\nuwsgi_param HTTP_EARLY_DATA $ssl_early_data if_not_empty;\n' \
     && apk del .build-deps \
     && rm -rf /tmp/patches /usr/src \
     && nginx -Vt
