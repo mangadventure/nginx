@@ -1,6 +1,6 @@
 FROM alpine:edge
 
-ARG NGINX_VERSION=3550b00d9dc8
+ARG NGINX_VERSION=f9d7930d0eed
 
 COPY patches /tmp/patches
 
@@ -14,7 +14,6 @@ RUN addgroup -S nginx \
         -X https://dl-cdn.alpinelinux.org/alpine/edge/testing/ \
     && apk add --no-cache -t .build-deps \
         build-base \
-        cargo \
         cmake \
         curl \
         git \
@@ -24,7 +23,6 @@ RUN addgroup -S nginx \
         linux-headers \
         make \
         mimalloc2-dev \
-        rust \
         tar \
         zlib-dev \
         zstd-dev \
@@ -42,10 +40,8 @@ RUN addgroup -S nginx \
     && curl -Ssf https://hg.nginx.org/nginx-quic/archive/${NGINX_VERSION}.tar.gz \
         | tar xzf - -C /usr/src/nginx --strip-components=1 \
     && curl -Ssfo /etc/ssl/dhparam.pem https://2ton.com.au/dhparam/4096 \
-    && cd /usr/src/openssl \
-    && patch -Np1 < /tmp/patches/openssl.patch \
     && cd /usr/src/nginx \
-    && cat /tmp/patches/0*.patch | patch -Np1 \
+    && cat /tmp/patches/*.patch | patch -Np1 \
     && ./auto/configure \
         --prefix=/etc/nginx \
         --sbin-path=/usr/sbin/nginx \
@@ -115,7 +111,5 @@ VOLUME /var/log/nginx \
        /etc/nginx/sites-enabled
 
 EXPOSE 80 443
-
-STOPSIGNAL SIGTERM
 
 ENTRYPOINT ["run-nginx", "-g", "daemon off;"]

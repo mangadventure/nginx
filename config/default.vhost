@@ -14,11 +14,4 @@ server {
     ssl_reject_handshake on;
 }
 
-server {
-    listen       80;
-    listen  [::]:80;
-
-    return 301  https://$host$request_uri;
-}
-
 # vim:ft=nginx:

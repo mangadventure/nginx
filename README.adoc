@@ -8,4 +8,3 @@ A custom build of nginx, packaged in a Docker container.
 * https://github.com/hakasenyang/openssl-patch/blob/master/nginx_hpack_remove_server_header_1.15.3.patch[no server header]
 * https://github.com/cloudflare/sslconfig/blob/master/patches/nginx__dynamic_tls_records.patch[dynamic TLS records]
 * https://github.com/angristan/nginx-autoinstall/blob/master/patches/nginx_hpack_push_with_http3.patch[HTTP/2 HPACK]
-* https://github.com/hakasenyang/openssl-patch/blob/6745da6/openssl-equal-1.1.1m-dev_ciphers.patch[OpenSSL cipher groups]
