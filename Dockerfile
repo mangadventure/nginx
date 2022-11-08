@@ -1,6 +1,6 @@
 FROM alpine:edge
 
-ARG NGINX_VERSION=f9d7930d0eed
+ARG NGINX_VERSION=9076a74f1221
 
 COPY patches /tmp/patches
 
@@ -28,7 +28,7 @@ RUN addgroup -S nginx \
         zstd-dev \
         -X https://dl-cdn.alpinelinux.org/alpine/edge/testing/ \
     && mkdir -p /usr/src/nginx /etc/ssl /etc/letsencrypt /etc/nginx/sites-enabled \
-    && git clone --depth=1 --branch=OpenSSL_1_1_1q+quic \
+    && git clone --depth=1 --branch=openssl-3.0.7+quic \
         https://github.com/quictls/openssl /usr/src/openssl \
     && git clone --depth=1 --shallow-submodules --recursive \
         https://github.com/google/ngx_brotli /usr/src/ngx_brotli \
