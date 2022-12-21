@@ -1,6 +1,6 @@
 FROM alpine:edge
 
-ARG NGINX_VERSION=9076a74f1221
+ARG NGINX_VERSION=91ad1abfb285
 
 COPY patches /tmp/patches
 
