@@ -1,6 +1,6 @@
-FROM alpine:edge
+FROM alpine:3.17
 
-ARG NGINX_VERSION=91ad1abfb285
+ARG NGINX_VERSION=987bee4363d1
 
 COPY patches /tmp/patches
 
@@ -11,7 +11,6 @@ RUN addgroup -S nginx \
         liburing \
         mimalloc2 \
         pcre2 \
-        -X https://dl-cdn.alpinelinux.org/alpine/edge/testing/ \
     && apk add --no-cache -t .build-deps \
         build-base \
         cmake \
@@ -26,7 +25,6 @@ RUN addgroup -S nginx \
         tar \
         zlib-dev \
         zstd-dev \
-        -X https://dl-cdn.alpinelinux.org/alpine/edge/testing/ \
     && mkdir -p /usr/src/nginx /etc/ssl /etc/letsencrypt /etc/nginx/sites-enabled \
     && git clone --depth=1 --branch=openssl-3.0.7+quic \
         https://github.com/quictls/openssl /usr/src/openssl \
