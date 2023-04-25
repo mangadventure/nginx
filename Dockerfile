@@ -1,9 +1,10 @@
 FROM alpine:3.17
 
-ARG NGINX_VERSION=987bee4363d1
+ARG NGINX_VERSION=8347620e0e76
 
 COPY patches /tmp/patches
 
+# hadolint ignore=DL3003,DL3018,DL4006,SC2016
 RUN addgroup -S nginx \
     && adduser -D -S -h /var/cache/nginx -s /sbin/nologin -G nginx nginx \
     && apk add --no-cache \
@@ -26,7 +27,7 @@ RUN addgroup -S nginx \
         zlib-dev \
         zstd-dev \
     && mkdir -p /usr/src/nginx /etc/ssl /etc/letsencrypt /etc/nginx/sites-enabled \
-    && git clone --depth=1 --branch=openssl-3.0.7+quic \
+    && git clone --depth=1 --branch=openssl-3.0.8+quic \
         https://github.com/quictls/openssl /usr/src/openssl \
     && git clone --depth=1 --shallow-submodules --recursive \
         https://github.com/google/ngx_brotli /usr/src/ngx_brotli \
