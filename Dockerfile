@@ -1,6 +1,6 @@
-FROM alpine:3.17
+FROM alpine:3.18
 
-ARG NGINX_VERSION=8347620e0e76
+ARG NGINX_VERSION=1.25.0
 
 COPY patches /tmp/patches
 
@@ -27,7 +27,7 @@ RUN addgroup -S nginx \
         zlib-dev \
         zstd-dev \
     && mkdir -p /usr/src/nginx /etc/ssl /etc/letsencrypt /etc/nginx/sites-enabled \
-    && git clone --depth=1 --branch=openssl-3.0.8+quic \
+    && git clone --depth=1 --branch=openssl-3.0.10+quic \
         https://github.com/quictls/openssl /usr/src/openssl \
     && git clone --depth=1 --shallow-submodules --recursive \
         https://github.com/google/ngx_brotli /usr/src/ngx_brotli \
@@ -36,7 +36,7 @@ RUN addgroup -S nginx \
     && git clone --depth=1 https://github.com/vozlt/nginx-module-vts /usr/src/ngx_vts \
     && git clone --depth=1 https://github.com/openresty/memc-nginx-module /usr/src/ngx_memc \
     && git clone --depth=1 https://github.com/openresty/redis2-nginx-module /usr/src/ngx_redis2 \
-    && curl -Ssf https://hg.nginx.org/nginx-quic/archive/${NGINX_VERSION}.tar.gz \
+    && curl -Ssf https://hg.nginx.org/nginx/archive/release-${NGINX_VERSION}.tar.gz \
         | tar xzf - -C /usr/src/nginx --strip-components=1 \
     && curl -Ssfo /etc/ssl/dhparam.pem https://2ton.com.au/dhparam/4096 \
     && cd /usr/src/nginx \
@@ -94,9 +94,13 @@ RUN addgroup -S nginx \
     && make install \
     && strip /usr/sbin/nginx objs/ngx_*_module.so \
     && cp -v objs/ngx_*_module.so /var/lib/nginx/modules \
-    && ln -s /var/lib/nginx/modules /etc/nginx/modules \
+    && rm -r /etc/nginx/html \
+             /etc/nginx/*.default \
+             /etc/nginx/fastcgi.conf \
+             /etc/nginx/{scgi,fastcgi}_params \
+             /etc/nginx/{koi-{win,utf},win-utf} \
     && printf >> /etc/nginx/uwsgi_params \
-        '\n\nuwsgi_param HTTP_EARLY_DATA $ssl_early_data if_not_empty;\n' \
+        '\nuwsgi_param HTTP_EARLY_DATA $ssl_early_data if_not_empty;\n' \
     && apk del .build-deps \
     && rm -rf /tmp/patches /usr/src \
     && nginx -Vt

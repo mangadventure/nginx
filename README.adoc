@@ -5,6 +5,6 @@ A custom build of nginx, packaged in a Docker container.
 === Patch list
 
 * https://github.com/hakasenyang/openssl-patch/blob/master/nginx_io_uring.patch[io_uring support]
-* https://github.com/hakasenyang/openssl-patch/blob/master/nginx_hpack_remove_server_header_1.15.3.patch[no server header]
+* https://github.com/hakasenyang/openssl-patch/blob/master/remove_nginx_server_header.patch[no server header]
 * https://github.com/cloudflare/sslconfig/blob/master/patches/nginx__dynamic_tls_records.patch[dynamic TLS records]
-* https://github.com/angristan/nginx-autoinstall/blob/master/patches/nginx_hpack_push_with_http3.patch[HTTP/2 HPACK]
+* https://github.com/centminmod/centminmod/blob/130.00beta01/patches/cloudflare/nginx-1.25.0_http2-hpack.patch[HTTP/2 HPACK]

@@ -218,7 +218,7 @@ diff --git a/src/http/modules/ngx_http_ssl_module.h b/src/http/modules/ngx_http_
 index 26fdccf..b14b52a 100644
 --- a/src/http/modules/ngx_http_ssl_module.h
 +++ b/src/http/modules/ngx_http_ssl_module.h
-@@ -61,4 +61,10 @@ typedef struct {
+@@ -67,6 +67,12 @@ typedef struct {
  
      u_char                         *file;
      ngx_uint_t                      line;
