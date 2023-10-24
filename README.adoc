@@ -1,6 +1,7 @@
 = MangAdventure nginx
 
-A custom build of nginx, packaged in a Docker container.
+A custom build of nginx, packaged in a Docker container. +
+An Arch Linux PKGBUILD is provided as well.
 
 === Patch list
 

@@ -1,0 +1,7 @@
+*.tar.gz
+*.pkg.*
+dhparam.pem
+openssl/
+ngx_*/
+src/
+pkg/

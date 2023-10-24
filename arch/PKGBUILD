@@ -1,0 +1,171 @@
+# Maintainer: ObserverOfTime <chronobserver@disroot.org>
+
+pkgname=nginx-custom
+pkgver=1.25.0
+pkgrel=1
+pkgdesc='Lightweight HTTP server and IMAP/POP3 proxy server (custom build)'
+arch=(x86_64)
+url='https://nginx.org'
+license=(custom)
+conflicts=(nginx)
+provides=("nginx=${pkgver%+*}")
+depends=(pcre2 zlib libxcrypt liburing mimalloc)
+makedepends=(git zstd)
+backup=(etc/nginx/nginx.conf
+        etc/nginx/uwsgi_params
+        etc/nginx/mime.types
+        etc/nginx/default.vhost
+        etc/logrotate.d/nginx)
+source=(nginx-${pkgver}.tar.gz::https://hg.nginx.org/nginx/archive/release-${pkgver}.tar.gz
+        git+https://github.com/quictls/openssl#branch=openssl-3.0.10+quic
+        ngx_brotli::git+https://github.com/google/ngx_brotli
+        ngx_zstd::git+https://github.com/tokers/zstd-nginx-module
+        ngx_ct::git+https://github.com/grahamedgecombe/nginx-ct
+        ngx_vts::git+https://github.com/vozlt/nginx-module-vts
+        ngx_memc::git+https://github.com/openresty/memc-nginx-module
+        ngx_redis2::git+https://github.com/openresty/redis2-nginx-module
+        dhparam.pem::https://2ton.com.au/dhparam/4096
+        nginx.service
+        logrotate
+        nginx.conf
+        mime.types
+        default.vhost
+        001-io-uring.patch
+        002-no-server-header.patch
+        003-dynamic-tls.patch
+        004-hpack-enc.patch)
+b2sums=('d72941977e4061487b43a206bc7e3b2d9d84ac60c42f792d3adef9ca38139278f68fc2cce6feaf3334f137ff59ed0ea030d2081065ee043cda5edf1cc93cd6b9'
+        'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP'
+        'e5b3af3eba36bac8c281d773cd90efb8de977a1241e246060661d5c1d436d537ff74b03d137a2bb4a7752339e98e9073ab803bc214a84906498f2383ecad07ff'
+        '5aa8dab4d6517fc09a96f2ced5c85a67a44878da4c5cde1031a089609d3d32505d0cb45e6842a1502cc6f09e03eef08ee0ce6826b73bcfdd8087b0b695f0801c'
+        'cf2e3ac48f06962e3ea4293f641bf8af75d7cc4269f4af9f0c23a313dce2fde9c558c6f9fcdd5d0a5458eb49b3608d29ab1406515398d3f3732385799ecce19e'
+        '8d1762a84a2bab88686a37b9a74a1f5e0367f17b13f5d7bc71c70f1d4066a5b9c167e2ddd246f1581070fd88e51be2f0c7a27b369f859b6366975c4a10abf4c3'
+        'cde70b02ddea730c80efe8af2f9c26fdac7c48489225a41f0e82543a1e952881df0deac4a40173c6ce415bfcf8722bc623743514a7cec4b1cf93a842fe85e3fb'
+        'f1d39725a26859bd5a72256e301ce585fee7e6aeba75dcf52328697cb2dac4d7daaabda7f4f148a9401c10208412d4b6b350d73a89bde1e7c24802509e02d87a'
+        'fd58f913dd397ce7c5bc8af92d8946a48dc0686c7f4879d87b68ccf78950867c7c067060dcfc4f30daadeb81e494cc2bea6e3447637bf198de453daa97a7a533'
+        'ffe84842a3f5e9db9fef52d5437feb6c278cbb3d20c2d4b4a836feb0475335a0946a2418c53b38f31d428bba7755dbb5c8a5080d5ffdbe8ff1b388e97878c95e'
+        '7f6364c416676af03f245b3ed978e51e0f62198941d1ee287ffec5a4607e53359172a2bfea29671b5e6ad490ea1ed9129900d6b205251e6a1cdad2887a4bb475'
+        '20c22df12ad3983424d16668b0cd4d99364be3c1ae9894c3750917cd26ed99659cbbf1fc0d325397f8f88bef56192108b84f64a876c768ff02b595e19a7e3ab1')
+
+prepare() {
+  msg2 'Updating brotli submodule'
+  git -C ngx_brotli submodule update --init --depth=1
+
+  cd nginx-release-$pkgver
+
+  msg2 'Applying io_uring patch'
+  patch --no-backup-if-mismatch -Np1 -i ../001-io-uring.patch
+
+  msg2 'Applying no server header patch'
+  patch --no-backup-if-mismatch -Np1 -i ../002-no-server-header.patch
+
+  msg2 'Applying dynamic TLS records patch'
+  patch --no-backup-if-mismatch -Np1 -i ../003-dynamic-tls.patch
+
+  msg2 'Applying HPACK encoding patch'
+  patch --no-backup-if-mismatch -Np1 -i ../004-hpack-enc.patch
+}
+
+build() {
+  cd nginx-release-$pkgver
+
+  auto/configure \
+    --prefix=/etc/nginx \
+    --sbin-path=/usr/bin/nginx \
+    --modules-path=/var/lib/nginx/modules \
+    --conf-path=/etc/nginx/nginx.conf \
+    --error-log-path=/var/log/nginx/error.log \
+    --http-log-path=/var/log/nginx/access.log \
+    --pid-path=/run/nginx.pid \
+    --lock-path=/run/lock/nginx.lock \
+    --http-client-body-temp-path=/var/cache/nginx/client_temp \
+    --http-proxy-temp-path=/var/cache/nginx/proxy_temp \
+    --http-uwsgi-temp-path=/var/cache/nginx/uwsgi_temp \
+    --user=nginx \
+    --group=nginx \
+    --with-compat \
+    --with-file-aio \
+    --with-threads \
+    --with-pcre \
+    --with-pcre-jit \
+    --with-mail \
+    --with-mail_ssl_module \
+    --without-mail_pop3_module \
+    --with-http_auth_request_module \
+    --with-http_gunzip_module \
+    --with-http_gzip_static_module \
+    --with-http_realip_module \
+    --with-http_slice_module \
+    --with-http_ssl_module \
+    --with-http_v2_module \
+    --with-http_v2_hpack_enc \
+    --with-http_v3_module \
+    --without-http_browser_module \
+    --without-http_empty_gif_module \
+    --without-http_fastcgi_module \
+    --without-http_geo_module \
+    --without-http_memcached_module \
+    --without-http_mirror_module \
+    --without-http_scgi_module \
+    --without-http_split_clients_module \
+    --without-http_userid_module \
+    --with-openssl="$srcdir"/openssl \
+    --add-dynamic-module="$srcdir"/ngx_brotli \
+    --add-dynamic-module="$srcdir"/ngx_zstd \
+    --add-dynamic-module="$srcdir"/ngx_ct \
+    --add-dynamic-module="$srcdir"/ngx_vts \
+    --add-dynamic-module="$srcdir"/ngx_memc \
+    --add-dynamic-module="$srcdir"/ngx_redis2 \
+    --with-cc-opt="$CFLAGS $CPPFLAGS" \
+    --with-ld-opt="$LDFLAGS -lmimalloc"
+
+  make -j$(getconf _NPROCESSORS_ONLN)
+}
+
+package() {
+  cd nginx-release-$pkgver
+  make DESTDIR="$pkgdir" install
+
+  rm "$pkgdir"/etc/nginx/*.default \
+     "$pkgdir"/etc/nginx/koi-win \
+     "$pkgdir"/etc/nginx/koi-utf \
+     "$pkgdir"/etc/nginx/win-utf \
+     "$pkgdir"/etc/nginx/scgi_params \
+     "$pkgdir"/etc/nginx/fastcgi_params \
+     "$pkgdir"/etc/nginx/fastcgi.conf
+  rm -r "$pkgdir"/run "$pkgdir"/etc/nginx/html
+
+  chmod 755 "$pkgdir"/var/log/nginx
+  chown root:root "$pkgdir"/var/log/nginx
+
+  install -d "$pkgdir"/var/lib/nginx
+  install -d "$pkgdir"/var/cache/nginx
+  install -d "$pkgdir"/etc/nginx/sites-available
+  install -d "$pkgdir"/etc/nginx/sites-enabled
+
+  install -Dm644 ../nginx.conf "$pkgdir"/etc/nginx
+  install -Dm644 ../mime.types "$pkgdir"/etc/nginx
+  install -Dm644 ../default.vhost "$pkgdir"/etc/nginx
+
+  install -Dm644 ../dhparam.pem "$pkgdir"/etc/ssl/dhparam.pem
+  install -Dm644 ../logrotate "$pkgdir"/etc/logrotate.d/nginx
+  install -Dm644 ../nginx.service "$pkgdir"/usr/lib/systemd/system/nginx.service
+
+  install -Dm644 objs/nginx.8 "$pkgdir"/usr/share/man/man8/nginx.8
+  install -Dm644 docs/text/LICENSE "$pkgdir"/usr/share/licenses/${pkgname}/LICENSE
+
+  for f in objs/ngx_*_module.so; do
+    install -Dm644 $f "$pkgdir"/var/lib/nginx/modules
+  done
+
+  for d in ftdetect ftplugin indent syntax; do
+    install -Dm644 contrib/vim/$d/nginx.vim \
+      "$pkgdir/usr/share/vim/vimfiles/$d/nginx.vim"
+  done
+
+  sed -i "$pkgdir"/etc/nginx/nginx.conf \
+      -e '/^user/s|nginx|http|;/^pid/s|/var||'
+
+  printf >> "$pkgdir"/etc/nginx/uwsgi_params \
+    '\nuwsgi_param HTTP_EARLY_DATA $ssl_early_data if_not_empty;\n'
+}
