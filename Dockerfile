@@ -13,6 +13,7 @@ RUN addgroup -S nginx \
         mimalloc2 \
         pcre2 \
     && apk add --no-cache -t .build-deps \
+        brotli-dev \
         build-base \
         cmake \
         curl \
@@ -40,7 +41,7 @@ RUN addgroup -S nginx \
         | tar xzf - -C /usr/src/nginx --strip-components=1 \
     && curl -Ssfo /etc/ssl/dhparam.pem https://2ton.com.au/dhparam/4096 \
     && cd /usr/src/nginx \
-    && cat /tmp/patches/*.patch | patch -Np1 \
+    && for f in /tmp/patches/*.patch; do patch -Np1 -i $f; done \
     && ./auto/configure \
         --prefix=/etc/nginx \
         --sbin-path=/usr/sbin/nginx \
@@ -96,9 +97,12 @@ RUN addgroup -S nginx \
     && cp -v objs/ngx_*_module.so /var/lib/nginx/modules \
     && rm -r /etc/nginx/html \
              /etc/nginx/*.default \
+             /etc/nginx/koi-win \
+             /etc/nginx/koi-utf \
+             /etc/nginx/win-utf \
+             /etc/nginx/scgi_params \
+             /etc/nginx/fastcgi_params \
              /etc/nginx/fastcgi.conf \
-             /etc/nginx/{scgi,fastcgi}_params \
-             /etc/nginx/{koi-{win,utf},win-utf} \
     && printf >> /etc/nginx/uwsgi_params \
         '\nuwsgi_param HTTP_EARLY_DATA $ssl_early_data if_not_empty;\n' \
     && apk del .build-deps \
