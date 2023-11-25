@@ -1,5 +1,6 @@
 *.tar.gz
 *.pkg.*
+*.log
 dhparam.pem
 openssl/
 ngx_*/

@@ -1,6 +1,6 @@
 FROM alpine:3.18
 
-ARG NGINX_VERSION=1.25.0
+ARG NGINX_VERSION=1.25.3
 
 COPY patches /tmp/patches
 
@@ -18,17 +18,17 @@ RUN addgroup -S nginx \
         cmake \
         curl \
         git \
-        perl \
-        pcre2-dev \
         liburing-dev \
         linux-headers \
         make \
         mimalloc2-dev \
+        pcre2-dev \
+        perl \
         tar \
         zlib-dev \
         zstd-dev \
     && mkdir -p /usr/src/nginx /etc/ssl /etc/letsencrypt /etc/nginx/sites-enabled \
-    && git clone --depth=1 --branch=openssl-3.0.10+quic \
+    && git clone --depth=1 --branch=openssl-3.1.4+quic \
         https://github.com/quictls/openssl /usr/src/openssl \
     && git clone --depth=1 --shallow-submodules --recursive \
         https://github.com/google/ngx_brotli /usr/src/ngx_brotli \
@@ -71,7 +71,6 @@ RUN addgroup -S nginx \
         --with-http_slice_module \
         --with-http_ssl_module \
         --with-http_v2_module \
-        --with-http_v2_hpack_enc \
         --with-http_v3_module \
         --without-http_browser_module \
         --without-http_empty_gif_module \
