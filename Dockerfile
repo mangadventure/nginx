@@ -8,6 +8,7 @@ COPY patches /tmp/patches
 RUN addgroup -S nginx \
     && adduser -D -S -h /var/cache/nginx -s /sbin/nologin -G nginx nginx \
     && apk add --no-cache \
+        brotli-libs \
         libgcc \
         liburing \
         mimalloc2 \

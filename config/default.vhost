@@ -13,5 +13,3 @@ server {
 
     ssl_reject_handshake on;
 }
-
-# vim:ft=nginx:
