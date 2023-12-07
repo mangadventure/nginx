@@ -2,7 +2,7 @@
 
 pkgname=nginx-custom
 pkgver=1.25.3
-pkgrel=1
+pkgrel=2
 pkgdesc='Lightweight HTTP server and IMAP/POP3 proxy server (custom build)'
 arch=(x86_64)
 url='https://nginx.org'
@@ -21,7 +21,7 @@ backup=(etc/nginx/nginx.conf
         etc/nginx/mime.types
         etc/nginx/default.vhost
         etc/logrotate.d/nginx)
-source=(nginx-${pkgver}.tar.gz::https://hg.nginx.org/nginx/archive/release-${pkgver}.tar.gz
+source=(nginx-${pkgver}.tar.gz::https://nginx.org/download/nginx-${pkgver}.tar.gz
         git+https://github.com/quictls/openssl#branch=openssl-3.1.4+quic
         ngx_brotli::git+https://github.com/google/ngx_brotli
         ngx_zstd::git+https://github.com/tokers/zstd-nginx-module
@@ -37,8 +37,9 @@ source=(nginx-${pkgver}.tar.gz::https://hg.nginx.org/nginx/archive/release-${pkg
         default.vhost
         001-io-uring.patch
         002-no-server-header.patch
-        003-dynamic-tls.patch)
-b2sums=('613d5ac8acdc7eed02c22b5db66bfd03d76cf0fb8fcfbb80ba904a6b91d1a1f7a2f59cfad0dd3005ec6ba730ea8b7bdb9fc3f0ac9971ab6188118822947b3034'
+        003-dynamic-tls.patch
+        004-limit-req-adjust.patch)
+b2sums=('f7a77b92b80197ce6cff477dac42169d638f69a4a408e979daa4f5e87ca0e4d18e366b8c2b0fc686cd69f5f926b5b097a8893f3c5295387bcc6f174a2f72e7f4'
         'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP'
         'e5b3af3eba36bac8c281d773cd90efb8de977a1241e246060661d5c1d436d537ff74b03d137a2bb4a7752339e98e9073ab803bc214a84906498f2383ecad07ff'
         '5aa8dab4d6517fc09a96f2ced5c85a67a44878da4c5cde1031a089609d3d32505d0cb45e6842a1502cc6f09e03eef08ee0ce6826b73bcfdd8087b0b695f0801c'
@@ -48,13 +49,14 @@ b2sums=('613d5ac8acdc7eed02c22b5db66bfd03d76cf0fb8fcfbb80ba904a6b91d1a1f7a2f59cf
         'f1d39725a26859bd5a72256e301ce585fee7e6aeba75dcf52328697cb2dac4d7daaabda7f4f148a9401c10208412d4b6b350d73a89bde1e7c24802509e02d87a'
         'fd58f913dd397ce7c5bc8af92d8946a48dc0686c7f4879d87b68ccf78950867c7c067060dcfc4f30daadeb81e494cc2bea6e3447637bf198de453daa97a7a533'
         'ffe84842a3f5e9db9fef52d5437feb6c278cbb3d20c2d4b4a836feb0475335a0946a2418c53b38f31d428bba7755dbb5c8a5080d5ffdbe8ff1b388e97878c95e'
-        '0a3ce87ad3cb3e4d9e569438d0febeb6457abd4f9032191b08f38c84ba5a628a4182541f8573c92187b895ab127ee8ff35e94020455556a320d1f7e270d6e8b1')
+        '0a3ce87ad3cb3e4d9e569438d0febeb6457abd4f9032191b08f38c84ba5a628a4182541f8573c92187b895ab127ee8ff35e94020455556a320d1f7e270d6e8b1'
+        '11df16bceb962ab735c35d0d6ef0ed41c6235015427ad5ad31c0d54b44a568727c140daccf7d1b189563299bf4dd643b8b1504341e2184e06c963d9112b50a1b')
 
 prepare() {
   msg2 'Updating brotli submodule'
   git -C ngx_brotli submodule update --init --depth=1
 
-  cd nginx-release-$pkgver
+  cd nginx-$pkgver
 
   msg2 'Applying io_uring patch'
   patch --no-backup-if-mismatch -Np1 -i ../001-io-uring.patch
@@ -64,12 +66,15 @@ prepare() {
 
   msg2 'Applying dynamic TLS records patch'
   patch --no-backup-if-mismatch -Np1 -i ../003-dynamic-tls.patch
+
+  msg2 'Applying limit_req adjustment patch'
+  patch --no-backup-if-mismatch -Np1 -i ../004-limit-req-adjust.patch
 }
 
 build() {
-  cd nginx-release-$pkgver
+  cd nginx-$pkgver
 
-  auto/configure \
+  ./configure \
     --prefix=/etc/nginx \
     --sbin-path=/usr/bin/nginx \
     --modules-path=/var/lib/nginx/modules \
@@ -122,7 +127,7 @@ build() {
 }
 
 package() {
-  cd nginx-release-$pkgver
+  cd nginx-$pkgver
   make DESTDIR="$pkgdir" install
 
   rm "$pkgdir"/etc/nginx/*.default \
@@ -151,7 +156,7 @@ package() {
   install -Dm644 ../nginx.service "$pkgdir"/usr/lib/systemd/system/nginx.service
 
   install -Dm644 objs/nginx.8 "$pkgdir"/usr/share/man/man8/nginx.8
-  install -Dm644 docs/text/LICENSE "$pkgdir"/usr/share/licenses/${pkgname}/LICENSE
+  install -Dm644 LICENSE "$pkgdir"/usr/share/licenses/${pkgname}/LICENSE
 
   for f in objs/ngx_*_module.so; do
     install -Dm644 "$f" "$pkgdir"/var/lib/nginx/modules

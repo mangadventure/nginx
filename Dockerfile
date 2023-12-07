@@ -37,12 +37,12 @@ RUN addgroup -S nginx \
     && git clone --depth=1 https://github.com/vozlt/nginx-module-vts /usr/src/ngx_vts \
     && git clone --depth=1 https://github.com/openresty/memc-nginx-module /usr/src/ngx_memc \
     && git clone --depth=1 https://github.com/openresty/redis2-nginx-module /usr/src/ngx_redis2 \
-    && curl -Ssf https://hg.nginx.org/nginx/archive/release-${NGINX_VERSION}.tar.gz \
+    && curl -Ssf https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
         | tar xzf - -C /usr/src/nginx --strip-components=1 \
     && curl -Ssfo /etc/ssl/dhparam.pem https://2ton.com.au/dhparam/4096 \
     && cd /usr/src/nginx \
     && for f in /tmp/patches/*.patch; do patch -Np1 -i $f; done \
-    && ./auto/configure \
+    && ./configure \
         --prefix=/etc/nginx \
         --sbin-path=/usr/sbin/nginx \
         --modules-path=/var/lib/nginx/modules \
