@@ -3,8 +3,8 @@
 # shellcheck disable=SC2154,SC2016,SC2206,SC2046
 
 pkgname=nginx-custom
-pkgver=1.25.3
-pkgrel=2
+pkgver=1.25.5
+pkgrel=1
 pkgdesc='Lightweight HTTP server and IMAP/POP3 proxy server (custom build)'
 arch=(x86_64)
 url='https://nginx.org'
@@ -24,7 +24,7 @@ backup=(etc/nginx/nginx.conf
         etc/nginx/default.vhost
         etc/logrotate.d/nginx)
 source=(nginx-${pkgver}.tar.gz::https://nginx.org/download/nginx-${pkgver}.tar.gz
-        git+https://github.com/quictls/openssl#branch=openssl-3.1.4+quic
+        git+https://github.com/quictls/openssl#branch=openssl-3.1.5+quic
         ngx_brotli::git+https://github.com/google/ngx_brotli
         ngx_zstd::git+https://github.com/tokers/zstd-nginx-module
         ngx_ct::git+https://github.com/grahamedgecombe/nginx-ct
@@ -41,7 +41,7 @@ source=(nginx-${pkgver}.tar.gz::https://nginx.org/download/nginx-${pkgver}.tar.g
         002-no-server-header.patch
         003-dynamic-tls.patch
         004-limit-req-adjust.patch)
-b2sums=('f7a77b92b80197ce6cff477dac42169d638f69a4a408e979daa4f5e87ca0e4d18e366b8c2b0fc686cd69f5f926b5b097a8893f3c5295387bcc6f174a2f72e7f4'
+b2sums=('75ff068554d96063d1c7cb18d84df4fe8b820f6065f3464efde055c707e94ff13c45bea261619a453f04abed1fa3f9baccf81c29ca0e956ef0535e9a5c931dc6'
         'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP'
         'e5b3af3eba36bac8c281d773cd90efb8de977a1241e246060661d5c1d436d537ff74b03d137a2bb4a7752339e98e9073ab803bc214a84906498f2383ecad07ff'
         '5aa8dab4d6517fc09a96f2ced5c85a67a44878da4c5cde1031a089609d3d32505d0cb45e6842a1502cc6f09e03eef08ee0ce6826b73bcfdd8087b0b695f0801c'
