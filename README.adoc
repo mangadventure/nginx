@@ -6,15 +6,14 @@ An Arch Linux PKGBUILD is provided as well.
 === Patch list
 
 * https://github.com/hakasenyang/openssl-patch/blob/master/nginx_io_uring.patch[io_uring support]
-* https://github.com/hakasenyang/openssl-patch/blob/master/remove_nginx_server_header.patch[no server header]
 * https://github.com/cloudflare/sslconfig/blob/master/patches/nginx__dynamic_tls_records.patch[dynamic TLS records]
 * https://mailman.nginx.org/pipermail/nginx-devel/2018-February/010856.html[limit_req adjustment]
 
 === Dynamic modules
 
 * https://github.com/google/ngx_brotli[brotli]
-* https://github.com/tokers/zstd-nginx-module[zstd]
 * https://github.com/grahamedgecombe/nginx-ct[ct]
-* https://github.com/vozlt/nginx-module-vts[vts]
 * https://github.com/openresty/memc-nginx-module[memc]
 * https://github.com/openresty/redis2-nginx-module[redis2]
+* https://github.com/vozlt/nginx-module-vts[vts]
+* https://github.com/tokers/zstd-nginx-module[zstd]

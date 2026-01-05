@@ -1,8 +1,6 @@
-diff --git a/auto/unix b/auto/unix
-index ff9697a..2e2f63a 100644
---- a/auto/unix
-+++ b/auto/unix
-@@ -532,44 +532,23 @@ if [ $NGX_FILE_AIO = YES ]; then
+--- old/auto/unix	2025-12-16 08:08:51.000000000 -0500
++++ new/auto/unix	2026-01-05 07:21:25.883408422 -0500
+@@ -571,44 +571,23 @@
  
      if [ $ngx_found = no ]; then
  
@@ -55,7 +53,7 @@ index ff9697a..2e2f63a 100644
          fi
      fi
  
-@@ -577,7 +556,7 @@ if [ $NGX_FILE_AIO = YES ]; then
+@@ -616,7 +595,7 @@
          cat << END
  
  $0: no supported file AIO was found
@@ -64,11 +62,9 @@ index ff9697a..2e2f63a 100644
  
  END
          exit 1
-diff --git a/src/core/ngx_open_file_cache.c b/src/core/ngx_open_file_cache.c
-index b23ee78..682d48c 100644
---- a/src/core/ngx_open_file_cache.c
-+++ b/src/core/ngx_open_file_cache.c
-@@ -869,11 +869,11 @@ ngx_open_and_stat_file(ngx_str_t *name, ngx_open_file_info_t *of,
+--- old/src/core/ngx_open_file_cache.c	2025-12-16 08:08:51.000000000 -0500
++++ new/src/core/ngx_open_file_cache.c	2026-01-05 07:21:25.883967532 -0500
+@@ -881,11 +881,11 @@
      if (!of->log) {
  
          /*
@@ -83,10 +79,8 @@ index b23ee78..682d48c 100644
                                     NGX_FILE_OPEN, 0, log);
  
      } else {
-diff --git a/src/event/modules/ngx_epoll_module.c b/src/event/modules/ngx_epoll_module.c
-index 98e3ce7..09dda1d 100644
---- a/src/event/modules/ngx_epoll_module.c
-+++ b/src/event/modules/ngx_epoll_module.c
+--- old/src/event/modules/ngx_epoll_module.c	2025-12-16 08:08:51.000000000 -0500
++++ new/src/event/modules/ngx_epoll_module.c	2026-01-05 07:21:25.884532492 -0500
 @@ -9,6 +9,10 @@
  #include <ngx_core.h>
  #include <ngx_event.h>
@@ -98,7 +92,7 @@ index 98e3ce7..09dda1d 100644
  
  #if (NGX_TEST_BUILD_EPOLL)
  
-@@ -75,23 +79,6 @@ int epoll_wait(int epfd, struct epoll_event *events, int nevents, int timeout)
+@@ -75,23 +79,6 @@
  #define SYS_eventfd       323
  #endif
  
@@ -122,7 +116,7 @@ index 98e3ce7..09dda1d 100644
  #endif /* NGX_TEST_BUILD_EPOLL */
  
  
-@@ -124,7 +111,7 @@ static ngx_int_t ngx_epoll_process_events(ngx_cycle_t *cycle, ngx_msec_t timer,
+@@ -124,7 +111,7 @@
      ngx_uint_t flags);
  
  #if (NGX_HAVE_FILE_AIO)
@@ -131,7 +125,7 @@ index 98e3ce7..09dda1d 100644
  #endif
  
  static void *ngx_epoll_create_conf(ngx_cycle_t *cycle);
-@@ -141,13 +128,11 @@ static ngx_connection_t     notify_conn;
+@@ -141,13 +128,11 @@
  #endif
  
  #if (NGX_HAVE_FILE_AIO)
@@ -149,7 +143,7 @@ index 98e3ce7..09dda1d 100644
  #endif
  
  #if (NGX_HAVE_EPOLLRDHUP)
-@@ -217,102 +202,40 @@ ngx_module_t  ngx_epoll_module = {
+@@ -217,102 +202,40 @@
  
  #if (NGX_HAVE_FILE_AIO)
  
@@ -265,7 +259,7 @@ index 98e3ce7..09dda1d 100644
      ngx_file_aio = 0;
  }
  
-@@ -549,23 +472,11 @@ ngx_epoll_done(ngx_cycle_t *cycle)
+@@ -549,23 +472,11 @@
  
  #if (NGX_HAVE_FILE_AIO)
  
@@ -292,7 +286,7 @@ index 98e3ce7..09dda1d 100644
  #endif
  
      ngx_free(event_list);
-@@ -939,84 +850,36 @@ ngx_epoll_process_events(ngx_cycle_t *cycle, ngx_msec_t timer, ngx_uint_t flags)
+@@ -939,84 +850,36 @@
  #if (NGX_HAVE_FILE_AIO)
  
  static void
@@ -396,11 +390,9 @@ index 98e3ce7..09dda1d 100644
  }
  
  #endif
-diff --git a/src/event/ngx_event.h b/src/event/ngx_event.h
-index 97f9673..eb17346 100644
---- a/src/event/ngx_event.h
-+++ b/src/event/ngx_event.h
-@@ -160,7 +160,9 @@ struct ngx_event_aio_s {
+--- old/src/event/ngx_event.h	2025-12-16 08:08:51.000000000 -0500
++++ new/src/event/ngx_event.h	2026-01-05 07:21:25.885000171 -0500
+@@ -156,7 +156,9 @@
      size_t                     nbytes;
  #endif
  
@@ -411,10 +403,8 @@ index 97f9673..eb17346 100644
      ngx_event_t                event;
  };
  
-diff --git a/src/os/unix/ngx_linux_aio_read.c b/src/os/unix/ngx_linux_aio_read.c
-index 9f0a6c1..033bd56 100644
---- a/src/os/unix/ngx_linux_aio_read.c
-+++ b/src/os/unix/ngx_linux_aio_read.c
+--- old/src/os/unix/ngx_linux_aio_read.c	2025-12-16 08:08:51.000000000 -0500
++++ new/src/os/unix/ngx_linux_aio_read.c	2026-01-05 07:21:25.885335973 -0500
 @@ -9,19 +9,15 @@
  #include <ngx_core.h>
  #include <ngx_event.h>
@@ -439,7 +429,7 @@ index 9f0a6c1..033bd56 100644
  
  
  ngx_int_t
-@@ -50,10 +46,10 @@ ssize_t
+@@ -50,10 +46,10 @@
  ngx_file_aio_read(ngx_file_t *file, u_char *buf, size_t size, off_t offset,
      ngx_pool_t *pool)
  {
@@ -454,7 +444,7 @@ index 9f0a6c1..033bd56 100644
  
      if (!ngx_file_aio) {
          return ngx_read_file(file, buf, size, offset);
-@@ -93,22 +89,41 @@ ngx_file_aio_read(ngx_file_t *file, u_char *buf, size_t size, off_t offset,
+@@ -93,22 +89,41 @@
          return NGX_ERROR;
      }
  
@@ -508,11 +498,9 @@ index 9f0a6c1..033bd56 100644
          ev->active = 1;
          ev->ready = 0;
          ev->complete = 0;
-diff --git a/src/os/unix/ngx_linux_config.h b/src/os/unix/ngx_linux_config.h
-index 3036cae..0e461dd 100644
---- a/src/os/unix/ngx_linux_config.h
-+++ b/src/os/unix/ngx_linux_config.h
-@@ -93,10 +93,6 @@ extern ssize_t sendfile(int s, int fd, int32_t *offset, size_t size);
+--- old/src/os/unix/ngx_linux_config.h	2025-12-16 08:08:51.000000000 -0500
++++ new/src/os/unix/ngx_linux_config.h	2026-01-05 07:21:25.885554343 -0500
+@@ -93,10 +93,6 @@
  #include <sys/eventfd.h>
  #endif
  #include <sys/syscall.h>

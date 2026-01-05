@@ -2,79 +2,82 @@
 
 # shellcheck disable=SC2154,SC2016,SC2206,SC2046
 
-pkgname=nginx-custom
-pkgver=1.25.5
+pkgname=freenginx-custom
+pkgver=1.29.4
 pkgrel=1
-pkgdesc='Lightweight HTTP server and IMAP/POP3 proxy server (custom build)'
+pkgdesc='Lightweight HTTP and reverse proxy server (custom build)'
+url='https://freenginx.org'
+license=('BSD-2-Clause')
 arch=(x86_64)
-url='https://nginx.org'
-license=(custom)
-conflicts=(nginx)
-provides=("nginx=${pkgver%+*}")
-depends=(libxcrypt liburing mimalloc pcre2 zlib)
+depends=(liburing libxcrypt mimalloc pcre2 zlib)
 makedepends=(git zstd)
-optdependes=(
-  'brotli: brotli module'
-  'memcached: memc module'
-  'redis: redis2 module'
+optdepends=(
+  'brotli: brotli compression module'
+  'memcached: memcached protocol module'
+  'redis: redis protocol module'
 )
-backup=(etc/nginx/nginx.conf
-        etc/nginx/uwsgi_params
-        etc/nginx/mime.types
-        etc/nginx/default.vhost
-        etc/logrotate.d/nginx)
-source=(nginx-${pkgver}.tar.gz::https://nginx.org/download/nginx-${pkgver}.tar.gz
-        git+https://github.com/quictls/openssl#branch=openssl-3.1.5+quic
-        ngx_brotli::git+https://github.com/google/ngx_brotli
-        ngx_zstd::git+https://github.com/tokers/zstd-nginx-module
-        ngx_ct::git+https://github.com/grahamedgecombe/nginx-ct
-        ngx_vts::git+https://github.com/vozlt/nginx-module-vts
-        ngx_memc::git+https://github.com/openresty/memc-nginx-module
-        ngx_redis2::git+https://github.com/openresty/redis2-nginx-module
-        dhparam.pem::https://2ton.com.au/dhparam/4096
-        nginx.service
-        logrotate
-        nginx.conf
-        mime.types
-        default.vhost
-        001-io-uring.patch
-        002-no-server-header.patch
-        003-dynamic-tls.patch
-        004-limit-req-adjust.patch)
-b2sums=('75ff068554d96063d1c7cb18d84df4fe8b820f6065f3464efde055c707e94ff13c45bea261619a453f04abed1fa3f9baccf81c29ca0e956ef0535e9a5c931dc6'
-        'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP'
-        'e5b3af3eba36bac8c281d773cd90efb8de977a1241e246060661d5c1d436d537ff74b03d137a2bb4a7752339e98e9073ab803bc214a84906498f2383ecad07ff'
-        '5aa8dab4d6517fc09a96f2ced5c85a67a44878da4c5cde1031a089609d3d32505d0cb45e6842a1502cc6f09e03eef08ee0ce6826b73bcfdd8087b0b695f0801c'
-        'cf2e3ac48f06962e3ea4293f641bf8af75d7cc4269f4af9f0c23a313dce2fde9c558c6f9fcdd5d0a5458eb49b3608d29ab1406515398d3f3732385799ecce19e'
-        '8d1762a84a2bab88686a37b9a74a1f5e0367f17b13f5d7bc71c70f1d4066a5b9c167e2ddd246f1581070fd88e51be2f0c7a27b369f859b6366975c4a10abf4c3'
-        'cde70b02ddea730c80efe8af2f9c26fdac7c48489225a41f0e82543a1e952881df0deac4a40173c6ce415bfcf8722bc623743514a7cec4b1cf93a842fe85e3fb'
-        'f0d39caa4126538cffc10a2f2d9faf365f554c2e0e3b87dfbc29ce9d5a3a5a5c00ef03ac88e8185edb619a19068e9aed388a003de7e05fd79887fe217fd2b9b0'
-        'fd58f913dd397ce7c5bc8af92d8946a48dc0686c7f4879d87b68ccf78950867c7c067060dcfc4f30daadeb81e494cc2bea6e3447637bf198de453daa97a7a533'
-        'ffe84842a3f5e9db9fef52d5437feb6c278cbb3d20c2d4b4a836feb0475335a0946a2418c53b38f31d428bba7755dbb5c8a5080d5ffdbe8ff1b388e97878c95e'
-        '0a3ce87ad3cb3e4d9e569438d0febeb6457abd4f9032191b08f38c84ba5a628a4182541f8573c92187b895ab127ee8ff35e94020455556a320d1f7e270d6e8b1'
-        '11df16bceb962ab735c35d0d6ef0ed41c6235015427ad5ad31c0d54b44a568727c140daccf7d1b189563299bf4dd643b8b1504341e2184e06c963d9112b50a1b')
+conflicts=(nginx freenginx-mainline)
+provides=(nginx "freenginx-mainline=${pkgver}")
+backup=(
+  etc/nginx/nginx.conf
+  etc/nginx/mime.types
+  etc/nginx/uwsgi_params
+  etc/nginx/default.vhost
+  etc/logrotate.d/nginx
+)
+source=(
+  "https://freenginx.org/download/freenginx-${pkgver}.tar.gz"{,.asc}
+  'git+https://github.com/defo-project/openssl.git#branch=3.6.0-ech'
+  'ngx_brotli::git+https://github.com/google/ngx_brotli.git'
+  'ngx_ct::git+https://github.com/grahamedgecombe/nginx-ct.git'
+  'ngx_memc::git+https://github.com/openresty/memc-nginx-module.git'
+  'ngx_redis2::git+https://github.com/openresty/redis2-nginx-module.git'
+  'ngx_vts::git+https://github.com/vozlt/nginx-module-vts.git'
+  'ngx_zstd::git+https://github.com/tokers/zstd-nginx-module.git'
+  '001-limit-req.patch' # https://mailman.nginx.org/pipermail/nginx-devel/2018-February/010856.html
+  '002-io-uring.patch' # https://github.com/centminmod/centminmod/blob/master/patches/nginx/nginx_io_uring.patch
+  '003-dynamic-tls.patch' # https://github.com/karljohns0n/nginx-more/blob/master/SOURCES/ngx_dynamic-tls-records-1.29.2.patch
+  'dhparam.pem::https://ssl-config.mozilla.org/ffdhe4096.txt'
+  'default.vhost'
+  'logrotate'
+  'mime.types'
+  'nginx.conf'
+  'nginx.service'
+)
+validpgpkeys=(
+  'B0F4253373F8F6F510D42178520A9993A1C052F8' # Maxim Dounin <mdounin@mdounin.ru>
+)
+sha256sums=('51a596451e334b51ce8cef1291b576ed601ed557e1b500e6c1a77a469d603e27'
+            'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP'
+            'd6f81c50e4e850c9ae6886b2d1d44e90cb04d4e3c75f16509dad36f5f43edb73'
+            'bd4390a2d192b4ef90b27163b742751a59d973d70337d1264215aa462bed0a56'
+            'b8e41f81fc38542bcc8b6225a56d2fd534b56a983650436477ec03582f99c1c3'
+            '64852d6890ff9e62eecd1ee89c72af9af244dfef5b853bcedea3dfd7aade22b3'
+            'd4a7eaf8a3d5c89c316cc243da69588afd6176b4b2b9e85f9404be3bb245706f'
+            'f891a825436e798de935c67bae35e9a80ee7f8430ca6667dd525a7cacff6e606'
+            '77ea37efe02510c014f9379c926e889efbf93422e7b474cfea41f8545d13f581'
+            '13cd56043431ef5a4a10fba5b501f5df6bd9c0c4b3f6ac8c594260d88528270e'
+            'adb4a2b5176be3a3bf39666584f7a0a7f10b1b1aca927c189c1910c789d6d13c')
 
 prepare() {
   msg2 'Updating brotli submodule'
   git -C ngx_brotli submodule update --init --depth=1
 
-  cd nginx-$pkgver
+  cd "freenginx-${pkgver}"
 
-  msg2 'Applying io_uring patch'
-  patch --no-backup-if-mismatch -Np1 -i ../001-io-uring.patch
+  msg2 'Stripping HTTP server tokens'
+  sed -i src/core/nginx.h -e 's/"freenginx"/"ws"/;s|NGINX_NAME "/" NGINX_VERSION|NGINX_NAME|'
 
-  msg2 'Applying no server header patch'
-  patch --no-backup-if-mismatch -Np1 -i ../002-no-server-header.patch
-
-  msg2 'Applying dynamic TLS records patch'
-  patch --no-backup-if-mismatch -Np1 -i ../003-dynamic-tls.patch
-
-  msg2 'Applying limit_req adjustment patch'
-  patch --no-backup-if-mismatch -Np1 -i ../004-limit-req-adjust.patch
+  msg2 'Applying "Limit req: r/h and r/d support" patch'
+  patch -Nbp1 < ../001-limit-req.patch
+  msg2 'Applying "Add io_uring support" patch'
+  patch -Nbp1 < ../002-io-uring.patch
+  msg2 'Applying "Add TLS Dynamic Record Resizing" patch'
+  patch -Nbp1 < ../003-dynamic-tls.patch
 }
 
 build() {
-  cd nginx-$pkgver
+  cd "freenginx-${pkgver}"
 
   ./configure \
     --prefix=/etc/nginx \
@@ -115,21 +118,21 @@ build() {
     --without-http_scgi_module \
     --without-http_split_clients_module \
     --without-http_userid_module \
-    --with-openssl="$srcdir"/openssl \
-    --add-dynamic-module="$srcdir"/ngx_brotli \
-    --add-dynamic-module="$srcdir"/ngx_zstd \
-    --add-dynamic-module="$srcdir"/ngx_ct \
-    --add-dynamic-module="$srcdir"/ngx_vts \
-    --add-dynamic-module="$srcdir"/ngx_memc \
-    --add-dynamic-module="$srcdir"/ngx_redis2 \
+    --with-openssl=../openssl \
     --with-cc-opt="$CFLAGS $CPPFLAGS" \
-    --with-ld-opt="$LDFLAGS -lmimalloc"
-
+    --with-ld-opt="$LDFLAGS -lmimalloc" \
+    --add-dynamic-module=../ngx_brotli \
+    --add-dynamic-module=../ngx_ct \
+    --add-dynamic-module=../ngx_memc \
+    --add-dynamic-module=../ngx_redis2 \
+    --add-dynamic-module=../ngx_vts \
+    --add-dynamic-module=../ngx_zstd
   make -j$(getconf _NPROCESSORS_ONLN)
 }
 
+
 package() {
-  cd nginx-$pkgver
+  cd freenginx-$pkgver
   make DESTDIR="$pkgdir" install
 
   rm "$pkgdir"/etc/nginx/*.default \

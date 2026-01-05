@@ -1,6 +1,6 @@
-FROM alpine:3.19
+FROM alpine:3.23
 
-ARG NGINX_VERSION=1.25.5
+ARG NGINX_VERSION=1.29.4
 
 SHELL [ "/bin/ash", "-e", "-o", "pipefail", "-c" ]
 
@@ -30,20 +30,21 @@ apk add --no-cache -t .build-deps \
     perl \
     tar \
     zlib-dev \
-    zstd-dev
+    zstd-dev \
+    zstd-static
 mkdir -p /usr/src/nginx /etc/ssl /etc/letsencrypt /etc/nginx/sites-enabled
-git clone --depth=1 --branch=openssl-3.1.5+quic \
-    https://github.com/quictls/openssl /usr/src/openssl
+git clone --depth=1 --branch=3.6.0-ech \
+    https://github.com/defo-project/openssl /usr/src/openssl
 git clone --depth=1 --shallow-submodules --recursive \
     https://github.com/google/ngx_brotli /usr/src/ngx_brotli
-git clone --depth=1 https://github.com/tokers/zstd-nginx-module /usr/src/ngx_zstd
 git clone --depth=1 https://github.com/grahamedgecombe/nginx-ct /usr/src/ngx_ct
-git clone --depth=1 https://github.com/vozlt/nginx-module-vts /usr/src/ngx_vts
 git clone --depth=1 https://github.com/openresty/memc-nginx-module /usr/src/ngx_memc
 git clone --depth=1 https://github.com/openresty/redis2-nginx-module /usr/src/ngx_redis2
-curl -Ssf https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz | \
+git clone --depth=1 https://github.com/vozlt/nginx-module-vts /usr/src/ngx_vts
+git clone --depth=1 https://github.com/tokers/zstd-nginx-module /usr/src/ngx_zstd
+curl -Ssf https://freenginx.org/download/freenginx-${NGINX_VERSION}.tar.gz | \
     tar xzf - -C /usr/src/nginx --strip-components=1
-curl -Ssfo /etc/ssl/dhparam.pem https://2ton.com.au/dhparam/4096
+curl -Ssfo /etc/ssl/dhparam.pem https://ssl-config.mozilla.org/ffdhe4096.txt
 cd /usr/src/nginx
 for f in /tmp/patches/*.patch; do patch -Np1 -i $f; done
 ./configure \
@@ -89,11 +90,11 @@ for f in /tmp/patches/*.patch; do patch -Np1 -i $f; done
     --with-cc-opt='-O2 -pipe' \
     --with-ld-opt='-lmimalloc' \
     --add-dynamic-module=/usr/src/ngx_brotli \
-    --add-dynamic-module=/usr/src/ngx_zstd \
     --add-dynamic-module=/usr/src/ngx_ct \
-    --add-dynamic-module=/usr/src/ngx_vts \
     --add-dynamic-module=/usr/src/ngx_memc \
-    --add-dynamic-module=/usr/src/ngx_redis2
+    --add-dynamic-module=/usr/src/ngx_redis2 \
+    --add-dynamic-module=/usr/src/ngx_vts \
+    --add-dynamic-module=/usr/src/ngx_zstd
 make -j$(getconf _NPROCESSORS_ONLN)
 make install
 strip /usr/sbin/nginx objs/ngx_*_module.so
