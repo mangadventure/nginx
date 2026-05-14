@@ -1,4 +1,5 @@
 *.tar.gz
+*.asc
 *.pkg.*
 *.log
 dhparam.pem

@@ -1,6 +1,6 @@
 FROM alpine:3.23
 
-ARG NGINX_VERSION=1.29.4
+ARG NGINX_VERSION=1.31.0
 
 SHELL [ "/bin/ash", "-e", "-o", "pipefail", "-c" ]
 

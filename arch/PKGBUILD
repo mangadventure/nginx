@@ -3,7 +3,7 @@
 # shellcheck disable=SC2154,SC2016,SC2206,SC2046
 
 pkgname=freenginx-custom
-pkgver=1.29.4
+pkgver=1.31.0
 pkgrel=1
 pkgdesc='Lightweight HTTP and reverse proxy server (custom build)'
 url='https://freenginx.org'
@@ -47,10 +47,10 @@ source=(
 validpgpkeys=(
   'B0F4253373F8F6F510D42178520A9993A1C052F8' # Maxim Dounin <mdounin@mdounin.ru>
 )
-sha256sums=('51a596451e334b51ce8cef1291b576ed601ed557e1b500e6c1a77a469d603e27'
+sha256sums=('94e3f108730c7a37874aceb6f63046390bc995da94dcc6a3b730909089dbac04'
             'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP'
             'd6f81c50e4e850c9ae6886b2d1d44e90cb04d4e3c75f16509dad36f5f43edb73'
-            'bd4390a2d192b4ef90b27163b742751a59d973d70337d1264215aa462bed0a56'
+            '8a55442cc62c5c9ec11074de8137753b4b79b60d4da46e0aa6bcd43f762ea404'
             'b8e41f81fc38542bcc8b6225a56d2fd534b56a983650436477ec03582f99c1c3'
             '64852d6890ff9e62eecd1ee89c72af9af244dfef5b853bcedea3dfd7aade22b3'
             'd4a7eaf8a3d5c89c316cc243da69588afd6176b4b2b9e85f9404be3bb245706f'
