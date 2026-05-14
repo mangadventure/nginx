@@ -1,6 +1,7 @@
 FROM alpine:3.23
 
 ARG NGINX_VERSION=1.31.0
+ARG MODSECURITY_VERSION=3.0.15
 
 SHELL [ "/bin/ash", "-e", "-o", "pipefail", "-c" ]
 
@@ -12,39 +13,53 @@ addgroup -S nginx
 adduser -D -S -h /var/cache/nginx -s /sbin/nologin -G nginx nginx
 apk add --no-cache \
     brotli-libs \
+    geoip \
+    libfuzzy2 \
     libgcc \
     liburing \
+    lmdb \
     mimalloc2 \
-    pcre2
+    pcre2 \
+    yajl
 apk add --no-cache -t .build-deps \
     brotli-dev \
     build-base \
     cmake \
     curl \
+    geoip-dev \
     git \
+    libfuzzy2-dev \
     liburing-dev \
     linux-headers \
+    lmdb-dev \
     make \
     mimalloc2-dev \
     pcre2-dev \
     perl \
     tar \
+    yajl-dev \
     zlib-dev \
     zstd-dev \
     zstd-static
-mkdir -p /usr/src/nginx /etc/ssl /etc/letsencrypt /etc/nginx/sites-enabled
+mkdir -p /usr/src/nginx /usr/src/modsecurity /etc/ssl /etc/letsencrypt /etc/nginx/sites-enabled
 git clone --depth=1 --branch=3.6.0-ech \
     https://github.com/defo-project/openssl /usr/src/openssl
 git clone --depth=1 --shallow-submodules --recursive \
     https://github.com/google/ngx_brotli /usr/src/ngx_brotli
 git clone --depth=1 https://github.com/grahamedgecombe/nginx-ct /usr/src/ngx_ct
 git clone --depth=1 https://github.com/openresty/memc-nginx-module /usr/src/ngx_memc
+git clone --depth=1 https://github.com/owasp-modsecurity/ModSecurity-nginx /usr/src/ngx_modsecurity
 git clone --depth=1 https://github.com/openresty/redis2-nginx-module /usr/src/ngx_redis2
 git clone --depth=1 https://github.com/vozlt/nginx-module-vts /usr/src/ngx_vts
 git clone --depth=1 https://github.com/tokers/zstd-nginx-module /usr/src/ngx_zstd
+curl -LSsf https://github.com/owasp-modsecurity/ModSecurity/releases/download/v${MODSECURITY_VERSION}/modsecurity-v${MODSECURITY_VERSION}.tar.gz | \
+    tar xzf - -C /usr/src/modsecurity --strip-components=1
 curl -Ssf https://freenginx.org/download/freenginx-${NGINX_VERSION}.tar.gz | \
     tar xzf - -C /usr/src/nginx --strip-components=1
 curl -Ssfo /etc/ssl/dhparam.pem https://ssl-config.mozilla.org/ffdhe4096.txt
+cd /usr/src/modsecurity
+./configure --disable-dependency-tracking --disable-examples --prefix=/usr
+make -j$(getconf _NPROCESSORS_ONLN) && make install
 cd /usr/src/nginx
 for f in /tmp/patches/*.patch; do patch -Np1 -i $f; done
 ./configure \
@@ -92,11 +107,11 @@ for f in /tmp/patches/*.patch; do patch -Np1 -i $f; done
     --add-dynamic-module=/usr/src/ngx_brotli \
     --add-dynamic-module=/usr/src/ngx_ct \
     --add-dynamic-module=/usr/src/ngx_memc \
+    --add-dynamic-module=/usr/src/ngx_modsecurity \
     --add-dynamic-module=/usr/src/ngx_redis2 \
     --add-dynamic-module=/usr/src/ngx_vts \
     --add-dynamic-module=/usr/src/ngx_zstd
-make -j$(getconf _NPROCESSORS_ONLN)
-make install
+make -j$(getconf _NPROCESSORS_ONLN) && make install
 strip /usr/sbin/nginx objs/ngx_*_module.so
 cp -v objs/ngx_*_module.so /var/lib/nginx/modules
 rm -r /etc/nginx/html \
@@ -124,4 +139,4 @@ VOLUME /var/log/nginx \
 
 EXPOSE 80 443
 
-ENTRYPOINT ["run-nginx", "-g", "daemon off;"]
+ENTRYPOINT [ "run-nginx", "-g", "daemon off;" ]
