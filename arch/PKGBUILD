@@ -3,13 +3,13 @@
 # shellcheck disable=SC2154,SC2016,SC2206,SC2046
 
 pkgname=freenginx-custom
-pkgver=1.31.0
+pkgver=1.31.5
 pkgrel=1
 pkgdesc='Lightweight HTTP and reverse proxy server (custom build)'
 url='https://freenginx.org'
 license=('BSD-2-Clause')
 arch=(x86_64)
-depends=(liburing libxcrypt mimalloc pcre2 zlib)
+depends=(liburing libxcrypt mimalloc 'openssl>=4.0' pcre2 zlib)
 makedepends=(geoip git libmodsecurity zstd)
 optdepends=(
   'brotli: brotli compression module'
@@ -28,7 +28,6 @@ backup=(
 )
 source=(
   "https://freenginx.org/download/freenginx-${pkgver}.tar.gz"{,.asc}
-  'git+https://github.com/defo-project/openssl.git#branch=3.6.0-ech'
   'ngx_brotli::git+https://github.com/google/ngx_brotli.git'
   'ngx_ct::git+https://github.com/grahamedgecombe/nginx-ct.git'
   'ngx_memc::git+https://github.com/openresty/memc-nginx-module.git'
@@ -39,6 +38,7 @@ source=(
   '001-limit-req.patch' # https://mailman.nginx.org/pipermail/nginx-devel/2018-February/010856.html
   '002-io-uring.patch' # https://github.com/centminmod/centminmod/blob/master/patches/nginx/nginx_io_uring.patch
   '003-dynamic-tls.patch' # https://github.com/karljohns0n/nginx-more/blob/master/SOURCES/ngx_dynamic-tls-records-1.29.2.patch
+  '004-nginx2root.patch' # https://xint.io/blog/nginx2root-remote-code-execution#63-exploitability-validation-25
   'dhparam.pem::https://ssl-config.mozilla.org/ffdhe4096.txt'
   'default.vhost'
   'logrotate'
@@ -49,11 +49,12 @@ source=(
 validpgpkeys=(
   'B0F4253373F8F6F510D42178520A9993A1C052F8' # Maxim Dounin <mdounin@mdounin.ru>
 )
-sha256sums=('94e3f108730c7a37874aceb6f63046390bc995da94dcc6a3b730909089dbac04'
-            'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP'
+sha256sums=('2ec163262804411a8f1157f4d6784b258db567e5e69708b75540c8684e90114f'
+            'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP'
             'd6f81c50e4e850c9ae6886b2d1d44e90cb04d4e3c75f16509dad36f5f43edb73'
             '8a55442cc62c5c9ec11074de8137753b4b79b60d4da46e0aa6bcd43f762ea404'
             'b8e41f81fc38542bcc8b6225a56d2fd534b56a983650436477ec03582f99c1c3'
+            'baaa1b7e2f5e3c3ba28edfe4f97b6fd6e624cd04958f577f739805f5f730f78b'
             '64852d6890ff9e62eecd1ee89c72af9af244dfef5b853bcedea3dfd7aade22b3'
             'd4a7eaf8a3d5c89c316cc243da69588afd6176b4b2b9e85f9404be3bb245706f'
             'f891a825436e798de935c67bae35e9a80ee7f8430ca6667dd525a7cacff6e606'
@@ -76,6 +77,8 @@ prepare() {
   patch -Nbp1 < ../002-io-uring.patch
   msg2 'Applying "Add TLS Dynamic Record Resizing" patch'
   patch -Nbp1 < ../003-dynamic-tls.patch
+  msg2 'Applying NGINX2Root mitigation patch'
+  patch -Nbp1 < ../004-nginx2root.patch
 }
 
 build() {
@@ -120,7 +123,6 @@ build() {
     --without-http_scgi_module \
     --without-http_split_clients_module \
     --without-http_userid_module \
-    --with-openssl=../openssl \
     --with-cc-opt="$CFLAGS $CPPFLAGS" \
     --with-ld-opt="$LDFLAGS -lmimalloc" \
     --add-dynamic-module=../ngx_brotli \

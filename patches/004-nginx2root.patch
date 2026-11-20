@@ -1,0 +1,316 @@
+From e27f5fa84fe6e98505e70bc543b748747dad0a3b Mon Sep 17 00:00:00 2001
+From: Roman Arutyunyan <arut@nginx.com>
+Date: Thu, 29 Oct 2026 21:37:05 +0400
+Subject: [PATCH] HTTP/2: account for queued frames when validating
+ WINDOW_UPDATE
+
+When a stream is terminated, its unsent payload length is refunded back
+to the connection flow control.  Previously, this could increase the
+flow control beyond NGX_HTTP_V2_MAX_WINDOW, if it was increased by the
+client after the stream frames were queued and before the stream was
+terminated.  This eventually resulted in broken buffer size control in
+ngx_http_v2_send_chain() followed by memory corruption and a possible
+segmentation fault.
+
+The fix is to account for the queued frames when validating a client
+WINDOW_UPDATE.  From the client's point of view, the queued frames
+still belong to the flow control window.
+
+Reported by Xint.io.
+---
+ src/http/v2/ngx_http_v2.c               | 4 ++--
+ src/http/v2/ngx_http_v2.h               | 1 +
+ src/http/v2/ngx_http_v2_filter_module.c | 3 +++
+ 3 files changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/src/http/v2/ngx_http_v2.c b/src/http/v2/ngx_http_v2.c
+index c308bdfcb2..807dd59c10 100644
+--- a/src/http/v2/ngx_http_v2.c
++++ b/src/http/v2/ngx_http_v2.c
+@@ -2561,13 +2561,13 @@ ngx_http_v2_state_window_update(ngx_http_v2_connection_t *h2c, u_char *pos,
+         return ngx_http_v2_state_complete(h2c, pos, end);
+     }
+
+-    if (window > NGX_HTTP_V2_MAX_WINDOW - h2c->send_window) {
++    if (window > NGX_HTTP_V2_MAX_WINDOW - h2c->send_window - h2c->send_queued) {
+         ngx_log_error(NGX_LOG_INFO, h2c->connection->log, 0,
+                       "client violated connection flow control: "
+                       "received WINDOW_UPDATE frame "
+                       "with window increment %uz "
+                       "not allowed for window %uz",
+-                      window, h2c->send_window);
++                      window, h2c->send_window + h2c->send_queued);
+
+         return ngx_http_v2_connection_error(h2c, NGX_HTTP_V2_FLOW_CTRL_ERROR);
+     }
+diff --git a/src/http/v2/ngx_http_v2.h b/src/http/v2/ngx_http_v2.h
+index eb3cd008e9..b2eaa5787f 100644
+--- a/src/http/v2/ngx_http_v2.h
++++ b/src/http/v2/ngx_http_v2.h
+@@ -135,6 +135,7 @@ struct ngx_http_v2_connection_s {
+     ngx_uint_t                       refused_streams;
+
+     size_t                           send_window;
++    size_t                           send_queued;
+     size_t                           recv_window;
+     size_t                           init_window;
+
+diff --git a/src/http/v2/ngx_http_v2_filter_module.c b/src/http/v2/ngx_http_v2_filter_module.c
+index 61e6371374..e91eb58243 100644
+--- a/src/http/v2/ngx_http_v2_filter_module.c
++++ b/src/http/v2/ngx_http_v2_filter_module.c
+@@ -1242,6 +1242,7 @@ ngx_http_v2_send_chain(ngx_connection_t *fc, ngx_chain_t *in, off_t limit)
+             ngx_http_v2_queue_frame(fn, frame);
+
+             h2c->send_window -= frame_size;
++            h2c->send_queued += frame_size;
+
+             stream->send_window -= frame_size;
+             stream->queued++;
+@@ -1634,6 +1635,7 @@ ngx_http_v2_data_frame_handler(ngx_http_v2_connection_t *h2c,
+     stream->request->header_size += NGX_HTTP_V2_FRAME_HEADER_SIZE;
+
+     h2c->payload_bytes += frame->length;
++    h2c->send_queued -= frame->length;
+
+     ngx_http_v2_handle_frame(stream, frame);
+
+@@ -1770,6 +1772,7 @@ ngx_http_v2_filter_cleanup(void *data)
+     }
+
+     h2c->send_window += window;
++    h2c->send_queued -= window;
+ }
+
+
+From e39708edc69a9c0c992b6af075db761946969534 Mon Sep 17 00:00:00 2001
+From: Roman Arutyunyan <arut@nginx.com>
+Date: Wed, 28 Oct 2026 21:51:48 +0400
+Subject: [PATCH] Resolver: fix non-current resolve finalization from resolve
+ handler
+
+Previously, when a resolve handler called ngx_resolve_name_done() or
+ngx_resolve_addr_done() for another resolve of the same name/address,
+a use-after-free could happen while reporting the finalized resolve.
+This may happen with upstream resolve when at least one subrequest is
+resolving the same name, and the request is terminated from the
+upstream resolve handler.
+
+The problem occurs when finalizing a non-current resolve that is
+already detached from rn->waiting and is about to be reported.  Such
+cases produced "could not cancel" alerts.  The resolve may also be
+detached with its node reset, while following a CNAME, in which case
+no alert was produced.
+
+Now the alerts are converted to debug messages and a finalizer is
+installed into ctx->handler to release the context memory later.
+
+Reported by Xint.io.
+---
+ src/core/ngx_resolver.c | 37 +++++++++++++++++++++++++++++++------
+ 1 file changed, 31 insertions(+), 6 deletions(-)
+
+diff --git a/src/core/ngx_resolver.c b/src/core/ngx_resolver.c
+index 1ee86e4583..db31de89c4 100644
+--- a/src/core/ngx_resolver.c
++++ b/src/core/ngx_resolver.c
+@@ -106,6 +106,7 @@ static ngx_int_t ngx_resolver_copy(ngx_resolver_t *r, ngx_str_t *name,
+ static ngx_int_t ngx_resolver_set_timeout(ngx_resolver_t *r,
+     ngx_resolver_ctx_t *ctx);
+ static void ngx_resolver_timeout_handler(ngx_event_t *ev);
++static void ngx_resolver_free_handler(ngx_resolver_ctx_t *ctx);
+ static void ngx_resolver_free_node(ngx_resolver_t *r, ngx_resolver_node_t *rn);
+ static void *ngx_resolver_alloc(ngx_resolver_t *r, size_t size);
+ static void *ngx_resolver_calloc(ngx_resolver_t *r, size_t size);
+@@ -570,9 +571,11 @@ ngx_resolve_name_done(ngx_resolver_ctx_t *ctx)
+                 w = w->next;
+             }
+
+-            ngx_log_error(NGX_LOG_ALERT, r->log, 0,
+-                          "could not cancel %V resolving", &ctx->name);
++            ngx_log_debug1(NGX_LOG_DEBUG_CORE, r->log, 0,
++                           "could not cancel %V resolving", &ctx->name);
+         }
++
++        ctx->handler = ngx_resolver_free_handler;
+     }
+
+ done:
+@@ -590,9 +593,12 @@ ngx_resolve_name_done(ngx_resolver_ctx_t *ctx)
+
+     if (ctx->event) {
+         ngx_resolver_free_locked(r, ctx->event);
++        ctx->event = NULL;
+     }
+
+-    ngx_resolver_free_locked(r, ctx);
++    if (ctx->handler != ngx_resolver_free_handler) {
++        ngx_resolver_free_locked(r, ctx);
++    }
+
+     /* unlock alloc mutex */
+
+@@ -1202,6 +1208,7 @@ ngx_resolve_addr_done(ngx_resolver_ctx_t *ctx)
+             }
+         }
+
++#if (NGX_DEBUG)
+         {
+             u_char     text[NGX_SOCKADDR_STRLEN];
+             ngx_str_t  addrtext;
+@@ -1210,9 +1217,12 @@ ngx_resolve_addr_done(ngx_resolver_ctx_t *ctx)
+             addrtext.len = ngx_sock_ntop(ctx->addr.sockaddr, ctx->addr.socklen,
+                                          text, NGX_SOCKADDR_STRLEN, 0);
+
+-            ngx_log_error(NGX_LOG_ALERT, r->log, 0,
+-                          "could not cancel %V resolving", &addrtext);
++            ngx_log_debug1(NGX_LOG_DEBUG_CORE, r->log, 0,
++                           "could not cancel %V resolving", &addrtext);
+         }
++#endif
++
++        ctx->handler = ngx_resolver_free_handler;
+     }
+
+ done:
+@@ -1225,9 +1235,12 @@ ngx_resolve_addr_done(ngx_resolver_ctx_t *ctx)
+
+     if (ctx->event) {
+         ngx_resolver_free_locked(r, ctx->event);
++        ctx->event = NULL;
+     }
+
+-    ngx_resolver_free_locked(r, ctx);
++    if (ctx->handler != ngx_resolver_free_handler) {
++        ngx_resolver_free_locked(r, ctx);
++    }
+
+     /* unlock alloc mutex */
+
+@@ -3005,6 +3018,11 @@ ngx_resolver_resolve_srv_names(ngx_resolver_ctx_t *ctx, ngx_resolver_node_t *rn)
+     ngx_resolver_ctx_t       *cctx;
+     ngx_resolver_srv_name_t  *srvs;
+
++    if (ctx->handler == ngx_resolver_free_handler) {
++        ctx->handler(ctx);
++        return;
++    }
++
+     r = ctx->resolver;
+
+     ctx->node = NULL;
+@@ -4136,6 +4154,13 @@ ngx_resolver_timeout_handler(ngx_event_t *ev)
+ }
+
+
++static void
++ngx_resolver_free_handler(ngx_resolver_ctx_t *ctx)
++{
++    ngx_resolver_free(ctx->resolver, ctx);
++}
++
++
+ static void
+ ngx_resolver_free_node(ngx_resolver_t *r, ngx_resolver_node_t *rn)
+ {
+From 2df48a501d0fb8212b7d39dffeeff5876332ba59 Mon Sep 17 00:00:00 2001
+From: Roman Arutyunyan <arut@nginx.com>
+Date: Thu, 17 Sep 2026 16:10:11 +0400
+Subject: [PATCH] HTTP/2: reset reusable connection status on stream creation
+
+Previously, an HTTP/2 connection could be reusable while having streams.
+This could result in an attempt to drain the connection while processing
+one if its streams, for example when connecting to an upstream.  After
+recognizing that the connection has streams, an attempt to send the
+GOAWAY frame was made.  On send failure, the connection was immediately
+closed and its pool released.  This triggered a use-after-free up the
+stack.
+
+Having an HTTP/2 connection with streams registered as reusable became
+possible after 76672e650.  A connection with no streams and a partial
+frame read from client was registered as reusable to avoid DoS attacks.
+So if a client sends only the first HEADERS frame byte, the connection
+becomes reusable.  Later, when the remaining HEADERS bytes are received
+and a new stream is created, the reusable status is not reset until the
+connection becomes idle.
+
+Fix is to mark the connection non-reusable upon stream creation.
+
+Reported by Albert @ Vexera AI.
+---
+ src/http/v2/ngx_http_v2.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/src/http/v2/ngx_http_v2.c b/src/http/v2/ngx_http_v2.c
+index b4297e929b..c308bdfcb2 100644
+--- a/src/http/v2/ngx_http_v2.c
++++ b/src/http/v2/ngx_http_v2.c
+@@ -3192,6 +3192,8 @@ ngx_http_v2_create_stream(ngx_http_v2_connection_t *h2c)
+
+     h2c->processing++;
+
++    ngx_reusable_connection(h2c->connection, 0);
++
+     if (h2c->connection->read->timer_set) {
+         ngx_del_timer(h2c->connection->read);
+     }
+From b5252dae1ca0d4c516b8bcffd9fa7fd967b73075 Mon Sep 17 00:00:00 2001
+From: Roman Arutyunyan <arut@nginx.com>
+Date: Sun, 1 Nov 2026 16:46:22 +0400
+Subject: [PATCH] QUIC: avoid main connection reuse after creating a stream
+
+Previously, ngx_quic_create_stream() cleared the main connection's
+reusable flag and then called ngx_get_connection() before inserting the
+new stream into the tree.  If the worker was low on free connections,
+the drain inside ngx_get_connection() could close an idle stream of the
+same main connection.  Since the new stream was not in the tree yet,
+that close found no remaining streams and marked the main connection
+reusable again.  Once reusable, the connection could later be drained
+while processing one of its streams, for example when connecting to an
+upstream, freeing it while still in use.
+
+Fix is to insert the new stream into the tree before calling
+ngx_get_connection(), so the main connection is not considered idle.
+
+Reported by Xint.io.
+---
+ src/event/quic/ngx_event_quic_streams.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/src/event/quic/ngx_event_quic_streams.c b/src/event/quic/ngx_event_quic_streams.c
+index cb885a0130..032c458551 100644
+--- a/src/event/quic/ngx_event_quic_streams.c
++++ b/src/event/quic/ngx_event_quic_streams.c
+@@ -731,12 +731,15 @@ ngx_quic_create_stream(ngx_connection_t *c, uint64_t id)
+         addr_text.data = NULL;
+     }
+
++    ngx_rbtree_insert(&qc->streams.tree, &qs->node);
++
+     reusable = c->reusable;
+     ngx_reusable_connection(c, 0);
+
+     sc = ngx_get_connection(c->fd, log);
+     if (sc == NULL) {
+         ngx_destroy_pool(pool);
++        ngx_rbtree_delete(&qc->streams.tree, &qs->node);
+         ngx_queue_insert_tail(&qc->streams.free, &qs->queue);
+         ngx_reusable_connection(c, reusable);
+         return NULL;
+@@ -803,6 +806,7 @@ ngx_quic_create_stream(ngx_connection_t *c, uint64_t id)
+     if (cln == NULL) {
+         ngx_close_connection(sc);
+         ngx_destroy_pool(pool);
++        ngx_rbtree_delete(&qc->streams.tree, &qs->node);
+         ngx_queue_insert_tail(&qc->streams.free, &qs->queue);
+         ngx_reusable_connection(c, reusable);
+         return NULL;
+@@ -811,8 +815,6 @@ ngx_quic_create_stream(ngx_connection_t *c, uint64_t id)
+     cln->handler = ngx_quic_stream_cleanup_handler;
+     cln->data = sc;
+
+-    ngx_rbtree_insert(&qc->streams.tree, &qs->node);
+-
+     return qs;
+ }
+

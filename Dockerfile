@@ -1,7 +1,7 @@
-FROM alpine:3.23
+FROM alpine:3.24
 
-ARG NGINX_VERSION=1.31.0
-ARG MODSECURITY_VERSION=3.0.15
+ARG NGINX_VERSION=1.31.5
+ARG MODSECURITY_VERSION=3.0.17
 
 SHELL [ "/bin/ash", "-e", "-o", "pipefail", "-c" ]
 
@@ -42,8 +42,8 @@ apk add --no-cache -t .build-deps \
     zstd-dev \
     zstd-static
 mkdir -p /usr/src/nginx /usr/src/modsecurity /etc/ssl /etc/letsencrypt /etc/nginx/sites-enabled
-git clone --depth=1 --branch=3.6.0-ech \
-    https://github.com/defo-project/openssl /usr/src/openssl
+git clone --depth=1 --branch=openssl-4.1 \
+    https://github.com/openssl/openssl /usr/src/openssl
 git clone --depth=1 --shallow-submodules --recursive \
     https://github.com/google/ngx_brotli /usr/src/ngx_brotli
 git clone --depth=1 https://github.com/grahamedgecombe/nginx-ct /usr/src/ngx_ct
